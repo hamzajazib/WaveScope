@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.3 — 2026-06-01
+
+### Fixes
+- **6 GHz channel width fallback** — when NetworkManager/nmcli reports `BANDWIDTH=0 MHz` for a 6 GHz BSS, WaveScope now falls back to the explicit `iw` HE Operation `Channel Width:` value before using any capability-based heuristics. This fixes 20 MHz 6 GHz networks being misclassified as 80 MHz.
+
 ## v1.9.2 — 2026-05-16
 
 ### New Features

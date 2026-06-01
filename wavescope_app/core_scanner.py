@@ -413,10 +413,13 @@ def parse_iw_scan(output: str) -> Dict[str, dict]:
                 d["iw_center_freq"] = int(freq_val) + offset
 
         # ── Operational channel width (from HE/VHT Operation IE) ─────────
-        # HE operation (6 GHz):  "* channel width: 160 MHz"
+        # HE operation can appear either as:
+        #   "* channel width: 160 MHz"
+        # or inside the 6 GHz Operation Information block as:
+        #   "Channel Width: 20 MHz"
         # VHT operation (5 GHz): "* channel width: N" (numeric code 0-3)
         oper_bw_m = re.search(
-            r"\*\s*channel\s+width\s*:\s*(?:\d+\s+\()?(\d+)\s*MHz",
+            r"(?:\*\s*)?channel\s+width\s*:\s*(?:\d+\s+\()?(\d+)\s*MHz",
             text,
             re.IGNORECASE,
         )
@@ -721,7 +724,7 @@ def enrich_with_iw(aps: List[AccessPoint]) -> None:
                     ap.manufacturer = wps_vendor
                     ap.manufacturer_source = "WPS (iw scan)"
 
-            # ── Fix bandwidth=0 (nmcli doesn't populate BANDWIDTH for 6 GHz) ─
+            # ── Fix bandwidth=0 only when nmcli did not provide a value ──────
             if ap.bandwidth_mhz == 0:
                 iw_bw = d.get("iw_oper_bw", 0)
                 if iw_bw:
