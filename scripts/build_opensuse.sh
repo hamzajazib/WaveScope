@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# build_rpm.sh — Build an .rpm package for WaveScope
-# Usage: ./scripts/build_rpm.sh [version]
-# Example: ./scripts/build_rpm.sh 1.3.1
+# build_opensuse.sh — Build an openSUSE .rpm package for WaveScope
+# Usage: ./scripts/build_opensuse.sh [version]
+# Example: ./scripts/build_opensuse.sh 1.3.1
 #
 # Requires: rpm-build
-#   Fedora/RHEL:  sudo dnf install rpm-build
+#   openSUSE: sudo zypper install -y rpm-build
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-VERSION="${1:-$(grep -m1 'VERSION' "$REPO_ROOT/wavescope_app/core_base.py" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')}" 
+VERSION="${1:-$(grep -m1 'VERSION' "$REPO_ROOT/wavescope_app/core_base.py" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')}"
 PKGNAME="wavescope"
-RPM_BUILD_DIR="$REPO_ROOT/_rpm_build"
+RPM_BUILD_DIR="$REPO_ROOT/_rpm_build_opensuse"
 TARBALL_NAME="${PKGNAME}-${VERSION}"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Building WaveScope v${VERSION}  →  .rpm"
+echo "  Building WaveScope v${VERSION}  →  openSUSE .rpm"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── 1. Cleanup & scaffold ─────────────────────────────────────────────────────
+# 1. Cleanup and scaffold
 rm -rf "$RPM_BUILD_DIR"
 mkdir -p \
     "$RPM_BUILD_DIR/SPECS" \
@@ -28,7 +28,7 @@ mkdir -p \
     "$RPM_BUILD_DIR/RPMS" \
     "$RPM_BUILD_DIR/SRPMS"
 
-# ── 2. Create source tarball ──────────────────────────────────────────────────
+# 2. Create source tarball
 STAGING="$RPM_BUILD_DIR/$TARBALL_NAME"
 mkdir -p "$STAGING/assets"
 cp "$REPO_ROOT/main.py" "$REPO_ROOT/requirements.txt" "$STAGING/"
@@ -38,7 +38,7 @@ cp "$REPO_ROOT/assets/icon.svg" "$STAGING/assets/"
 tar -czf "$RPM_BUILD_DIR/SOURCES/${TARBALL_NAME}.tar.gz" \
     -C "$RPM_BUILD_DIR" "$TARBALL_NAME"
 
-# ── 3. Write spec file ────────────────────────────────────────────────────────
+# 3. Write openSUSE spec file
 HAS_SCREENSHOT=0
 [ -f "$REPO_ROOT/assets/screenshot.png" ] && HAS_SCREENSHOT=1
 
@@ -52,16 +52,16 @@ URL:            https://github.com/yurividal/WaveScope
 Source0:        ${TARBALL_NAME}.tar.gz
 BuildArch:      noarch
 
-# ── Runtime dependencies (Fedora/RHEL package names) ─────────────────────────
+# Runtime dependencies (openSUSE names)
 Requires:       python3 >= 3.10
 Requires:       python3-pip
+Requires:       python3-qt6
 Requires:       NetworkManager
 Requires:       iw
 Requires:       tcpdump
 Requires:       polkit
-Requires:       xcb-util-cursor
-# Qt Python bindings from distro packages (Fedora/RHEL)
-Requires:       python3-qt6
+Requires:       libxcb-cursor0
+Requires:       libgthread-2_0-0
 
 %description
 WaveScope is a fast, modern WiFi analyzer for Linux built with PyQt6.
@@ -88,14 +88,12 @@ install -dm 755 %{buildroot}/usr/bin
 install -dm 755 %{buildroot}/usr/share/applications
 install -dm 755 %{buildroot}/usr/share/icons/hicolor/scalable/apps
 
-# ── /usr/bin/wavescope launcher ───────────────────────────────────────────────
 cat > %{buildroot}/usr/bin/wavescope <<'LAUNCHER'
 #!/usr/bin/env bash
 exec /opt/wavescope/.venv/bin/python /opt/wavescope/main.py "\$@"
 LAUNCHER
 chmod 0755 %{buildroot}/usr/bin/wavescope
 
-# ── .desktop entry ────────────────────────────────────────────────────────────
 cat > %{buildroot}/usr/share/applications/wavescope.desktop <<'DESKTOP'
 [Desktop Entry]
 Name=WaveScope
@@ -109,21 +107,20 @@ Keywords=wifi;wireless;network;analyzer;
 StartupWMClass=wavescope
 DESKTOP
 
-# ── Icon ──────────────────────────────────────────────────────────────────────
 install -pm 644 assets/icon.svg \
     %{buildroot}/usr/share/icons/hicolor/scalable/apps/wavescope.svg
 
 %post
 set -e
 VENV="/opt/wavescope/.venv"
-echo "▸ Setting up Python environment for WaveScope…"
+echo "Setting up Python environment for WaveScope..."
 rm -rf "\$VENV"
 python3 -m venv --system-site-packages "\$VENV"
 "\$VENV/bin/pip" install --upgrade pip -q
-"\$VENV/bin/pip" install --quiet \\
-    "pyqtgraph>=0.13.0" \\
+"\$VENV/bin/pip" install --quiet \
+    "pyqtgraph>=0.13.0" \
     "numpy>=1.23.0"
-echo "✓ WaveScope ready. Run: wavescope"
+echo "WaveScope ready. Run: wavescope"
 
 %preun
 if [ \$1 -eq 0 ]; then
@@ -144,26 +141,25 @@ fi
 - See https://github.com/yurividal/WaveScope/releases for full changelog
 SPEC
 
-# Append screenshot to %files if it exists
 if [ "$HAS_SCREENSHOT" -eq 1 ]; then
     sed -i 's|/opt/wavescope/assets/icon.svg|/opt/wavescope/assets/icon.svg\n/opt/wavescope/assets/screenshot.png|' \
         "$RPM_BUILD_DIR/SPECS/${PKGNAME}.spec"
 fi
 
-# ── 4. Build the RPM ──────────────────────────────────────────────────────────
+# 4. Build RPM
 rpmbuild --define "_topdir $RPM_BUILD_DIR" \
          -bb "$RPM_BUILD_DIR/SPECS/${PKGNAME}.spec"
 
-# ── 5. Copy output to project root ───────────────────────────────────────────
+# 5. Copy output to project root
 RPM_FILE=$(find "$RPM_BUILD_DIR/RPMS" -name "*.rpm" | head -1)
 if [[ -n "$RPM_FILE" ]]; then
     cp "$RPM_FILE" "$REPO_ROOT/"
     RPM_BASENAME="$(basename "$RPM_FILE")"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ✓ Built: $RPM_BASENAME"
+    echo "  Built: $RPM_BASENAME"
     echo ""
-    echo "  Install:  sudo dnf install ./$RPM_BASENAME"
+    echo "  Install:  sudo zypper install ./$RPM_BASENAME"
     echo "  Run:      wavescope"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi

@@ -38,8 +38,7 @@ Package: $PKGNAME
 Version: $VERSION
 Architecture: $ARCH
 Maintainer: WaveScope Contributors <https://github.com/yurividal/WaveScope>
-Depends: python3 (>= 3.10), python3-pip, python3-venv, network-manager, iw, tcpdump, polkitd | policykit-1 | polkit | pkexec, libxcb-cursor0, libxcb-xinerama0, libxcb-randr0
-Recommends: python3-pyqt6
+Depends: python3 (>= 3.10), python3-pip, python3-venv, python3-pyqt6, network-manager, iw, tcpdump, polkitd | policykit-1 | polkit | pkexec, libxcb-cursor0, libxcb-xinerama0, libxcb-randr0
 Section: net
 Priority: optional
 Homepage: https://github.com/yurividal/WaveScope
@@ -59,10 +58,10 @@ cat > "$DEB_ROOT/DEBIAN/postinst" <<'EOF'
 set -e
 VENV="/opt/wavescope/.venv"
 echo "▸ Setting up Python environment for WaveScope…"
-python3 -m venv "$VENV"
+rm -rf "$VENV"
+python3 -m venv --system-site-packages "$VENV"
 "$VENV/bin/pip" install --upgrade pip
 "$VENV/bin/pip" install \
-    "PyQt6>=6.4.0" \
     "pyqtgraph>=0.13.0" \
     "numpy>=1.23.0"
 echo "✓ WaveScope ready. Run: wavescope"
