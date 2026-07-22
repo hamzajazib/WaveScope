@@ -15,7 +15,7 @@ def _detect_wifi_interfaces() -> List[Dict[str, str]]:
     """
     try:
         out = subprocess.run(
-            ["iw", "dev"], capture_output=True, text=True, timeout=4
+            [IW_BIN, "dev"], capture_output=True, text=True, timeout=4
         ).stdout
     except Exception:
         return []
@@ -514,7 +514,7 @@ class MonitorModeWindow(QDialog):
         self._proc.readyReadStandardOutput.connect(self._on_stdout)
         self._proc.readyReadStandardError.connect(self._on_stderr)
         self._proc.finished.connect(self._on_proc_finished)
-        self._proc.start("pkexec", ["bash", self._master_script])
+        self._proc.start(PKEXEC_BIN, ["bash", self._master_script])
         self._log_line("▶  Starting (Polkit authentication may appear…)")
 
     def _on_stdout(self):
@@ -629,7 +629,7 @@ class MonitorModeWindow(QDialog):
         self._cleanup_proc.finished.connect(
             lambda code, _s, p=cleanup_path: self._on_cleanup_finished(code, p)
         )
-        self._cleanup_proc.start("pkexec", ["bash", cleanup_path])
+        self._cleanup_proc.start(PKEXEC_BIN, ["bash", cleanup_path])
         self._log_line("▶  Cleanup running…")
 
     def _on_cleanup_stdout(self):
@@ -921,7 +921,7 @@ class ManagedCaptureWindow(QDialog):
         self._proc.readyReadStandardOutput.connect(self._on_stdout)
         self._proc.readyReadStandardError.connect(self._on_stderr)
         self._proc.finished.connect(self._on_proc_finished)
-        self._proc.start("pkexec", ["bash", self._capture_script])
+        self._proc.start(PKEXEC_BIN, ["bash", self._capture_script])
         self._set_state(self._ST_CAPTURE, "Starting\u2026")
         self._btn_start.setText("\u23f9  Stop Capture")
         self._btn_start.setStyleSheet(
@@ -997,7 +997,7 @@ class ManagedCaptureWindow(QDialog):
         self._cleanup_proc.finished.connect(
             lambda code, _s, p=cleanup_path: self._on_cleanup_finished(code, p)
         )
-        self._cleanup_proc.start("pkexec", ["bash", cleanup_path])
+        self._cleanup_proc.start(PKEXEC_BIN, ["bash", cleanup_path])
         self._log_line("\u25b6  Cleanup running\u2026")
 
     def _on_cleanup_stdout(self):

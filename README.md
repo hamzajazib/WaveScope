@@ -130,6 +130,16 @@ chmod +x scripts/build_rpm.sh
 sudo dnf install ./wavescope_*.rpm
 ```
 
+### .rpm (openSUSE)
+
+```bash
+# Requires: rpm-build
+# sudo zypper install -y rpm-build
+chmod +x scripts/build_opensuse.sh
+./scripts/build_opensuse.sh
+sudo zypper install ./wavescope-*.rpm
+```
+
 ### AppImage
 
 ```bash

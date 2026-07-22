@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.9.4 — 2026-07-22
+
+### New Features
+- **Startup dependency check** — WaveScope now checks for `nmcli`, `iw`, `tcpdump`, and `pkexec` on launch. If any are missing, a dialog lists which ones and what breaks without them, with the choice to proceed anyway (degraded/inaccurate results) or quit and install them first.
+
+### Fixes
+- **`iw` not found on PATH** — on many distros (openSUSE, Fedora, …) `iw` lives in `/usr/sbin`, which isn't on a typical desktop session's `PATH`. WaveScope was invoking `iw` (and `nmcli`/`pkexec`) by bare name and silently swallowing the resulting `FileNotFoundError`, which disabled *all* `iw`-based enrichment (6 GHz channel width fallback, WiFi generation, BSS Load, k/v/r support, station link stats). WaveScope now resolves each tool's full path at startup, falling back to `/usr/sbin` and `/sbin` when it isn't on `PATH`. This is very likely the actual cause of 6 GHz networks still showing `0 MHz` width after the v1.9.3 fallback fix.
+
 ## v1.9.3 — 2026-06-01
 
 ### Fixes

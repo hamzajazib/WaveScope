@@ -20,6 +20,7 @@ import stat
 import tempfile
 import urllib.request
 import subprocess
+import shutil
 from pathlib import Path
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -233,8 +234,98 @@ from .theme import (
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-VERSION = "1.9.3"
+VERSION = "1.9.4"
 APP_NAME = "WaveScope"
+
+
+def _find_binary(name: str, extra_dirs: Tuple[str, ...] = ()) -> str:
+    """Resolve an external tool, falling back to sbin dirs not on PATH.
+
+    Desktop sessions commonly run with a PATH that omits the sbin dirs
+    (e.g. "/usr/bin:/bin" only), even though tools like `iw` are installed
+    under /usr/sbin on most distros. subprocess.run([name, ...]) then fails
+    with FileNotFoundError, which several call sites silently swallow —
+    disabling the feature that depends on it without any indication why
+    (e.g. all iw-based enrichment: 6 GHz channel width fallback, WiFi
+    generation, BSS Load, etc.).
+    """
+    found = shutil.which(name)
+    if found:
+        return found
+    for directory in extra_dirs:
+        candidate = os.path.join(directory, name)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return name
+
+
+_SBIN_DIRS = ("/usr/sbin", "/sbin")
+
+NMCLI_BIN = _find_binary("nmcli", _SBIN_DIRS)
+IW_BIN = _find_binary("iw", _SBIN_DIRS)
+TCPDUMP_BIN = _find_binary("tcpdump", _SBIN_DIRS)
+PKEXEC_BIN = _find_binary("pkexec", _SBIN_DIRS)
+
+# Tools required for full functionality, checked at startup so the user gets
+# an explicit warning instead of features silently degrading.
+#   name shown to the user, resolved path, impact if missing
+REQUIRED_TOOLS: List[Tuple[str, str, str]] = [
+    (
+        "nmcli",
+        NMCLI_BIN,
+        "Wi-Fi scanning will not work at all — nmcli is how WaveScope "
+        "discovers access points (part of NetworkManager).",
+    ),
+    (
+        "iw",
+        IW_BIN,
+        "6 GHz channel width, WiFi generation, BSS Load, and 802.11k/v/r "
+        "details will be missing or inaccurate.",
+    ),
+    (
+        "tcpdump",
+        TCPDUMP_BIN,
+        "Packet capture will not work.",
+    ),
+    (
+        "pkexec",
+        PKEXEC_BIN,
+        "Packet capture will not work (requires a root prompt via Polkit).",
+    ),
+]
+
+
+def find_missing_tools() -> List[Tuple[str, str]]:
+    """Return (name, impact) for each required tool not found on disk."""
+    missing = []
+    for name, resolved, impact in REQUIRED_TOOLS:
+        if not (os.path.isfile(resolved) and os.access(resolved, os.X_OK)):
+            missing.append((name, impact))
+    return missing
+
+
+def warn_missing_tools_and_confirm(missing: List[Tuple[str, str]]) -> bool:
+    """Show a blocking popup listing missing dependencies.
+
+    Returns True if the user chose to proceed anyway, False if they chose
+    to quit. Requires a QApplication to already exist.
+    """
+    names = ", ".join(name for name, _ in missing)
+    lines = "\n".join(f"• {name} — {impact}" for name, impact in missing)
+    box = QMessageBox()
+    box.setIcon(QMessageBox.Icon.Warning)
+    box.setWindowTitle(f"{APP_NAME} — Missing dependencies")
+    box.setText(f"{APP_NAME} could not find: {names}")
+    box.setInformativeText(
+        f"{lines}\n\nInstall the missing package(s) with your system's "
+        "package manager, then restart WaveScope for full functionality."
+    )
+    proceed_btn = box.addButton("Proceed Anyway", QMessageBox.ButtonRole.AcceptRole)
+    quit_btn = box.addButton("Quit", QMessageBox.ButtonRole.RejectRole)
+    box.setDefaultButton(quit_btn)
+    box.exec()
+    return box.clickedButton() is proceed_btn
+
 
 HISTORY_SECONDS = 120  # seconds of signal history to keep
 REFRESH_INTERVALS = [1, 2, 5, 10]  # seconds

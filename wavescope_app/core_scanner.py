@@ -133,7 +133,7 @@ def _detect_wifi_iface() -> Optional[str]:
         return _IW_IFACE
     try:
         out = subprocess.run(
-            ["iw", "dev"], capture_output=True, text=True, timeout=3
+            [IW_BIN, "dev"], capture_output=True, text=True, timeout=3
         ).stdout
         iface: Optional[str] = None
         for line in out.splitlines():
@@ -560,7 +560,7 @@ def _get_connected_link_metrics(iface: str) -> Dict[str, object]:
 
     try:
         link_res = subprocess.run(
-            ["iw", "dev", iface, "link"],
+            [IW_BIN, "dev", iface, "link"],
             capture_output=True,
             text=True,
             timeout=3,
@@ -605,7 +605,7 @@ def _get_connected_link_metrics(iface: str) -> Dict[str, object]:
 
     try:
         sta_res = subprocess.run(
-            ["iw", "dev", iface, "station", "dump"],
+            [IW_BIN, "dev", iface, "station", "dump"],
             capture_output=True,
             text=True,
             timeout=3,
@@ -619,7 +619,7 @@ def _get_connected_link_metrics(iface: str) -> Dict[str, object]:
 
     try:
         survey_res = subprocess.run(
-            ["iw", "dev", iface, "survey", "dump"],
+            [IW_BIN, "dev", iface, "survey", "dump"],
             capture_output=True,
             text=True,
             timeout=3,
@@ -643,7 +643,7 @@ def enrich_with_iw(aps: List[AccessPoint]) -> None:
         return
     try:
         res = subprocess.run(
-            ["iw", "dev", iface, "scan", "dump"],
+            [IW_BIN, "dev", iface, "scan", "dump"],
             capture_output=True,
             text=True,
             timeout=6,
@@ -656,7 +656,7 @@ def enrich_with_iw(aps: List[AccessPoint]) -> None:
         # Run separately because -u suppresses some decoded output (e.g. BSS Load).
         # Note: -u must come after the subcommands: iw dev <iface> scan dump -u
         res_u = subprocess.run(
-            ["iw", "dev", iface, "scan", "dump", "-u"],
+            [IW_BIN, "dev", iface, "scan", "dump", "-u"],
             capture_output=True,
             text=True,
             timeout=6,
@@ -862,7 +862,7 @@ class WiFiScanner(QThread):
                     # First sweep — triggers probe requests on all channels
                     subprocess.run(
                         [
-                            "nmcli",
+                            NMCLI_BIN,
                             "-t",
                             "-f",
                             NMCLI_FIELDS,
@@ -879,7 +879,7 @@ class WiFiScanner(QThread):
                     # Second sweep — picks up probe responses from hidden APs
                     result = subprocess.run(
                         [
-                            "nmcli",
+                            NMCLI_BIN,
                             "-t",
                             "-f",
                             NMCLI_FIELDS,
@@ -896,7 +896,7 @@ class WiFiScanner(QThread):
                 else:
                     result = subprocess.run(
                         [
-                            "nmcli",
+                            NMCLI_BIN,
                             "-t",
                             "-f",
                             NMCLI_FIELDS,

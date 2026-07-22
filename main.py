@@ -12,7 +12,7 @@ import pyqtgraph as pg
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QApplication
 
-from wavescope_app.core import APP_NAME
+from wavescope_app.core import APP_NAME, find_missing_tools, warn_missing_tools_and_confirm
 from wavescope_app.main_window import MainWindow
 from wavescope_app.theme import _dark_palette, GRAPH_BG_DARK, GRAPH_AXIS_DARK
 
@@ -36,6 +36,10 @@ def main():
         app.setWindowIcon(QIcon(str(icon_path)))
 
     app.setPalette(_dark_palette())
+
+    missing = find_missing_tools()
+    if missing and not warn_missing_tools_and_confirm(missing):
+        sys.exit(1)
 
     for name in ("Inter", "Segoe UI", "Ubuntu", "Noto Sans", "DejaVu Sans"):
         font = QFont(name, 10)
