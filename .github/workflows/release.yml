@@ -63,6 +63,38 @@ jobs:
           files: wavescope-*.noarch.rpm
           generate_release_notes: true
 
+  # ── openSUSE ──────────────────────────────────────────────────────────────────
+  build-opensuse:
+    runs-on: ubuntu-latest
+    container: opensuse/tumbleweed
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install rpm-build
+        run: zypper --non-interactive install rpm-build tar gzip
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build openSUSE .rpm
+        run: |
+          chmod +x scripts/build_opensuse.sh
+          ./scripts/build_opensuse.sh "${{ steps.version.outputs.VERSION }}"
+
+      - name: Rename to avoid clashing with Fedora/RHEL .rpm
+        run: mv wavescope-*.noarch.rpm wavescope-${{ steps.version.outputs.VERSION }}-1.opensuse.noarch.rpm
+
+      - name: Upload openSUSE .rpm to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: wavescope-*.opensuse.noarch.rpm
+          generate_release_notes: true
+
   # ── AppImage ───────────────────────────────────────────────────────────────
   build-appimage:
     runs-on: ubuntu-latest
