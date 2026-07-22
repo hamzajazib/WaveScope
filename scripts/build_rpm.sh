@@ -33,15 +33,11 @@ STAGING="$RPM_BUILD_DIR/$TARBALL_NAME"
 mkdir -p "$STAGING/assets"
 cp "$REPO_ROOT/main.py" "$REPO_ROOT/requirements.txt" "$STAGING/"
 cp -r "$REPO_ROOT/wavescope_app" "$STAGING/"
-cp "$REPO_ROOT/assets/icon.svg" "$STAGING/assets/"
-[ -f "$REPO_ROOT/assets/screenshot.png" ] && cp "$REPO_ROOT/assets/screenshot.png" "$STAGING/assets/" || true
+cp -r "$REPO_ROOT/assets/." "$STAGING/assets/"
 tar -czf "$RPM_BUILD_DIR/SOURCES/${TARBALL_NAME}.tar.gz" \
     -C "$RPM_BUILD_DIR" "$TARBALL_NAME"
 
 # ── 3. Write spec file ────────────────────────────────────────────────────────
-HAS_SCREENSHOT=0
-[ -f "$REPO_ROOT/assets/screenshot.png" ] && HAS_SCREENSHOT=1
-
 cat > "$RPM_BUILD_DIR/SPECS/${PKGNAME}.spec" <<SPEC
 Name:           ${PKGNAME}
 Version:        ${VERSION}
@@ -76,13 +72,10 @@ Requires NetworkManager (nmcli) and iw for full functionality.
 %autosetup -n ${TARBALL_NAME}
 
 %install
-install -dm 755 %{buildroot}/opt/wavescope/assets
+install -dm 755 %{buildroot}/opt/wavescope
 install -pm 644 main.py requirements.txt %{buildroot}/opt/wavescope/
 cp -r wavescope_app %{buildroot}/opt/wavescope/
-install -pm 644 assets/icon.svg %{buildroot}/opt/wavescope/assets/
-if [ -f assets/screenshot.png ]; then
-    install -pm 644 assets/screenshot.png %{buildroot}/opt/wavescope/assets/
-fi
+cp -r assets %{buildroot}/opt/wavescope/
 
 install -dm 755 %{buildroot}/usr/bin
 install -dm 755 %{buildroot}/usr/share/applications
@@ -134,7 +127,7 @@ fi
 /opt/wavescope/main.py
 /opt/wavescope/requirements.txt
 /opt/wavescope/wavescope_app/
-/opt/wavescope/assets/icon.svg
+/opt/wavescope/assets/
 /usr/bin/wavescope
 /usr/share/applications/wavescope.desktop
 /usr/share/icons/hicolor/scalable/apps/wavescope.svg
@@ -143,12 +136,6 @@ fi
 * $(date "+%a %b %d %Y") WaveScope Contributors <https://github.com/yurividal/WaveScope> - ${VERSION}-1
 - See https://github.com/yurividal/WaveScope/releases for full changelog
 SPEC
-
-# Append screenshot to %files if it exists
-if [ "$HAS_SCREENSHOT" -eq 1 ]; then
-    sed -i 's|/opt/wavescope/assets/icon.svg|/opt/wavescope/assets/icon.svg\n/opt/wavescope/assets/screenshot.png|' \
-        "$RPM_BUILD_DIR/SPECS/${PKGNAME}.spec"
-fi
 
 # ── 4. Build the RPM ──────────────────────────────────────────────────────────
 rpmbuild --define "_topdir $RPM_BUILD_DIR" \
